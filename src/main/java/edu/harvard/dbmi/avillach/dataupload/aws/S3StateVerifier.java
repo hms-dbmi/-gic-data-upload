@@ -31,6 +31,9 @@ public class S3StateVerifier {
     @Value("${aws.s3.access_key_id}")
     private String keyId;
 
+    @Value("${aws.kms.key_id}")
+    private String kmsKeyId;
+
     @Autowired
     private SelfRefreshingS3Client client;
 
@@ -71,6 +74,7 @@ public class S3StateVerifier {
         PutObjectRequest request = PutObjectRequest.builder()
             .bucket(bucketName)
             .serverSideEncryption(ServerSideEncryption.AWS_KMS)
+            .ssekmsKeyId(kmsKeyId)
             .key(p.getFileName().toString())
             .build();
         client.getS3Client().putObject(request, body);
