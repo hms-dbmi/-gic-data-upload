@@ -14,7 +14,7 @@ Parameters:
   # Hence why we're using account roots rather than iam users. 
   UploaderAccountIds:
     Type: List<String>
-    Description: 'A comma delimited list of AWS account roots. Ex: arn:aws:iam::1111111111111:root,arn:aws:iam::2222222222222:root'
+    Description: 'A comma delimited list of AWS account roots. Ex: arn:aws:iam::762503070141:root,arn:aws:iam::2222222222222:root'
     Default: ''
 Resources:
 #-------------------------------------------------------------------------------
@@ -171,14 +171,19 @@ Resources:
               AWS: 
               - !Sub 'arn:aws:iam::${AWS::AccountId}:role/PicSureDataUploaderRole'
             Action:
-              - s3:PutObject*
-              - s3:DeleteObject*
+              - s3:DeleteObject
+              - s3:GetObject
+              - s3:PutObject
+              - s3:ListBucket
+              - s3:PutObjectTagging
+              - s3:PutObjectVersionTagging
+              - s3:GetObjectTagging
+              - s3:GetObjectVersionTagging
+              - s3:DeleteObjectTagging
+              - s3:DeleteObjectVersionTagging
             Resource:
               - !Sub 'arn:aws:s3:::pic-sure-data-sharing-bucket-${InstitutionName}/*'
               - !Sub 'arn:aws:s3:::pic-sure-data-sharing-bucket-${InstitutionName}'
-            Condition:
-              Bool:
-                aws:SecureTransport: true
           - Sid: Allow SWB clients with everything role
             Effect: Allow
             Principal:
@@ -188,9 +193,6 @@ Resources:
             Resource:
               - !Sub 'arn:aws:s3:::pic-sure-data-sharing-bucket-${InstitutionName}/*'
               - !Sub 'arn:aws:s3:::pic-sure-data-sharing-bucket-${InstitutionName}'
-            Condition:
-              Bool:
-                aws:SecureTransport: true
           - Sid: Deny unencrypted object uploads
             Effect: Deny
             Principal: '*'

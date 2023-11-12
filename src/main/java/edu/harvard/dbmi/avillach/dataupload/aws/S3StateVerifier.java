@@ -7,10 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
+import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.encryption.s3.S3EncryptionClient;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -70,6 +68,7 @@ public class S3StateVerifier {
 
     private String uploadFileFromPath(Path p) {
         LOG.info("Verifying upload capabilities");
+        assert !client.getS3Client().listObjects(ListObjectsRequest.builder().bucket(bucketName).build()).contents().isEmpty();
         RequestBody body = RequestBody.fromFile(p.toFile());
         PutObjectRequest request = PutObjectRequest.builder()
             .bucket(bucketName)
