@@ -17,6 +17,12 @@
 		<java.version>21</java.version>
 		<aws.version>2.20.153</aws.version>
 	</properties>
+	<repositories>
+		<repository>
+			<id>jitpack.io</id>
+			<url>https://jitpack.io</url>
+		</repository>
+	</repositories>
 	<dependencies>
         <!--Checkmarx winges about a vulnerability in snakeyaml, but the CVE is for 1.30, not 1.33. Ignoring-->
 		<!--suppress VulnerableLibrariesLocal -->
@@ -55,6 +61,19 @@
 			<groupId>software.amazon.encryption.s3</groupId>
 			<artifactId>amazon-s3-encryption-client-java</artifactId>
 			<version>3.1.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.github.hms-dbmi</groupId>
+			<artifactId>pic-sure</artifactId>
+			<version>e421ae9caff5ed02e9cd27812edfe24ec455281c</version>
+			<exclusions>
+				<!--Exclude all transitive dependencies. I just want the ResourceInfo class-->
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>*</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<dependency>
