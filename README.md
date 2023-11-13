@@ -78,3 +78,11 @@ Started DatauploadApplication in 3.342 seconds (process running for 3.824)
 Verifying delete capabilities
 S3 connection verified.
 ```
+
+TODO:
+- Mount this study in service workbench
+  - Admin UI
+- Test all 4 workspace types
+  - Mount study
+  - R/W access
+  - 

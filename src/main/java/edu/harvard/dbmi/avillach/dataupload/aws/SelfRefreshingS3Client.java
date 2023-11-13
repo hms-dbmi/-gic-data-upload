@@ -12,10 +12,12 @@ import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetBucketEncryptionRequest;
 import software.amazon.awssdk.services.sts.StsClient;
 import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
 import software.amazon.awssdk.services.sts.model.AssumeRoleResponse;
 import software.amazon.awssdk.services.sts.model.Credentials;
+import software.amazon.encryption.s3.S3EncryptionClient;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -41,6 +43,9 @@ public class SelfRefreshingS3Client {
 
     @Value("${aws.s3.shared_secret}")
     private String sharedSecret;
+
+    @Value("${aws.kms.key_id}")
+    private String kmsKeyId;
 
     @Autowired
     private ConfigurableApplicationContext context;
@@ -83,10 +88,19 @@ public class SelfRefreshingS3Client {
             .expirationTime(credentials.expiration())
             .build();
         StaticCredentialsProvider provider = StaticCredentialsProvider.create(sessionCredentials);
-        s3Client = S3Client.builder()
+        S3Client client = S3Client.builder()
             .credentialsProvider(provider)
             .region(Region.US_EAST_1)
             .build();
+        LOG.info("Created S3 client");
+
+        LOG.info("Verifying KMS encryption");
+        s3Client = S3EncryptionClient.builder()
+            .wrappedClient(client)
+            .kmsKeyId(kmsKeyId)
+            .build();
+        LOG.info("Encryption key exists and we can build an encryption client");
+
         // now that client is refreshed, unlock for reading
         LOG.info("Unlocking s3 client. Session refreshed");
         lock.writeLock().unlock();
