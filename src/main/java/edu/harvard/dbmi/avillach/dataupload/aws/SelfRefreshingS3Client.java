@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
@@ -32,6 +33,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * the client when the token expires. Requests to the getter will block while this
  * refresh task is running
  */
+@ConditionalOnProperty(name = "production", havingValue = "true")
 @Service
 public class SelfRefreshingS3Client {
     private static final Logger LOG = LoggerFactory.getLogger(SelfRefreshingS3Client.class);
