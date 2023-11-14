@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.StringUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
@@ -36,6 +37,9 @@ public class AWSConfiguration {
     @Bean
     @ConditionalOnProperty(name = "production", havingValue = "true")
     public AwsCredentialsProvider createCredentials() {
-        return StaticCredentialsProvider.create(AwsSessionCredentials.create(keyId, secret, token));
+        if (StringUtils.hasLength(token)) {
+            return StaticCredentialsProvider.create(AwsSessionCredentials.create(keyId, secret, token));
+        }
+        return StaticCredentialsProvider.create(AwsBasicCredentials.create(keyId, secret));
     }
 }

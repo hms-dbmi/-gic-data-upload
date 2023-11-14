@@ -51,8 +51,16 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - s3:PutObject*
-              - s3:DeleteObject*
+              - s3:DeleteObject
+              - s3:GetObject
+              - s3:PutObject
+              - s3:ListBucket
+              - s3:PutObjectTagging
+              - s3:PutObjectVersionTagging
+              - s3:GetObjectTagging
+              - s3:GetObjectVersionTagging
+              - s3:DeleteObjectTagging
+              - s3:DeleteObjectVersionTagging
             Resource:
               - !Sub 'arn:aws:s3:::pic-sure-data-sharing-bucket-${InstitutionName}/*'
     
@@ -173,7 +181,7 @@ Resources:
       - ServiceWorkbenchClient
       - PicSureStudyBucket
     Properties:
-      Bucket: !Join ['-', ['pic-sure-data-sharing-bucket', !Ref InstitutionName]]
+      Bucket: !Join [ '-', [ 'pic-sure-data-sharing-bucket', !Ref InstitutionName ] ]
       PolicyDocument:
         Statement:
           - Sid: Deny requests that do not use TLS/HTTPS
@@ -189,8 +197,8 @@ Resources:
           - Sid: Allow PIC-SURE clients with uploader role
             Effect: Allow
             Principal:
-              AWS: 
-              - !Sub 'arn:aws:iam::${AWS::AccountId}:role/PicSureDataUploaderRole'
+              AWS:
+                - !Sub 'arn:aws:iam::${AWS::AccountId}:role/PicSureDataUploaderRole'
             Action:
               - s3:DeleteObject
               - s3:GetObject
@@ -208,8 +216,8 @@ Resources:
           - Sid: Allow SWB clients with everything role
             Effect: Allow
             Principal:
-              AWS: 
-              - !Sub arn:aws:iam::${AWS::AccountId}:role/ServiceWorkbenchRole
+              AWS:
+                - !Sub arn:aws:iam::${AWS::AccountId}:role/ServiceWorkbenchRole
             Action: s3:*
             Resource:
               - !Sub 'arn:aws:s3:::pic-sure-data-sharing-bucket-${InstitutionName}/*'
