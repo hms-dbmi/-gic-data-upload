@@ -70,7 +70,6 @@ public class S3StateVerifier {
 
     private String uploadFileFromPath(Path p) {
         LOG.info("Verifying upload capabilities");
-        assert !client.getS3Client().listObjects(ListObjectsRequest.builder().bucket(bucketName).build()).contents().isEmpty();
         RequestBody body = RequestBody.fromFile(p.toFile());
         PutObjectRequest request = PutObjectRequest.builder()
             .bucket(bucketName)

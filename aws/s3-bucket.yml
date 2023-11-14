@@ -18,6 +18,27 @@ Parameters:
     Default: ''
 Resources:
 #-------------------------------------------------------------------------------
+#                               Users & Access Keys
+#-------------------------------------------------------------------------------
+  DataUploadUser:
+    # make dep on policy
+    Type: AWS::IAM::User
+    Properties:
+      Path: "/data-upload-user/"
+
+  DataUploadUserAccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName:
+        !Ref DataUploadUser
+
+  DataUploadUserSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Join ['-', [!Ref InstitutionName, data-upload-user-secret]]
+      Description: Access Key secret for Data Upload User
+      SecretString: !GetAtt DataUploadUserAccessKey.SecretAccessKey
+#-------------------------------------------------------------------------------
 #                                Roles & Policies
 #-------------------------------------------------------------------------------
   PicSureUploadPolicy:
