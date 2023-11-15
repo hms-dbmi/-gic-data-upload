@@ -13,6 +13,7 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Testcontainers
@@ -40,8 +41,8 @@ class UploadStatusRepositoryTest {
         Query query = new Query();
         query.setId(UUID.fromString("33613336-3934-3761-2d38-3233312d3131").toString());
 
-        UploadStatus actual = subject.getGenomicStatus(query);
-        UploadStatus expected = UploadStatus.Complete;
+        Optional<UploadStatus> actual = subject.getGenomicStatus(query.getId());
+        Optional<UploadStatus> expected = Optional.of(UploadStatus.Complete);
 
         Assertions.assertEquals(expected, actual);
     }
@@ -51,8 +52,8 @@ class UploadStatusRepositoryTest {
         Query query = new Query();
         query.setId(UUID.fromString("33613336-3934-3761-2d38-3233312d3131").toString());
 
-        UploadStatus actual = subject.getPhenotypicStatus(query);
-        UploadStatus expected = UploadStatus.Error;
+        Optional<UploadStatus> actual = subject.getPhenotypicStatus(query.getId());
+        Optional<UploadStatus> expected = Optional.of(UploadStatus.Error);
 
         Assertions.assertEquals(expected, actual);
     }
@@ -62,9 +63,9 @@ class UploadStatusRepositoryTest {
         Query query = new Query();
         query.setId(UUID.fromString("33613336-3934-3761-2d38-3233312d3131").toString());
 
-        subject.setGenomicStatus(query, UploadStatus.InProgress);
-        UploadStatus actual = subject.getGenomicStatus(query);
-        UploadStatus expected = UploadStatus.InProgress;
+        subject.setGenomicStatus(query.getId(), UploadStatus.InProgress);
+        Optional<UploadStatus> actual = subject.getGenomicStatus(query.getId());
+        Optional<UploadStatus> expected = Optional.of(UploadStatus.InProgress);
 
         Assertions.assertEquals(expected, actual);
     }
@@ -74,9 +75,9 @@ class UploadStatusRepositoryTest {
         Query query = new Query();
         query.setId(UUID.fromString("33613336-3934-3761-2d38-3233312d3131").toString());
 
-        subject.setPhenotypicStatus(query, UploadStatus.NotStarted);
-        UploadStatus actual = subject.getPhenotypicStatus(query);
-        UploadStatus expected = UploadStatus.NotStarted;
+        subject.setPhenotypicStatus(query.getId(), UploadStatus.NotStarted);
+        Optional<UploadStatus> actual = subject.getPhenotypicStatus(query.getId());
+        Optional<UploadStatus> expected = Optional.of(UploadStatus.NotStarted);
 
         Assertions.assertEquals(expected, actual);
     }
@@ -86,10 +87,10 @@ class UploadStatusRepositoryTest {
         Query query = new Query();
         query.setId(UUID.randomUUID().toString());
 
-        subject.setGenomicStatus(query, UploadStatus.InProgress);
+        subject.setGenomicStatus(query.getId(), UploadStatus.InProgress);
 
-        UploadStatus actual = subject.getPhenotypicStatus(query);
-        UploadStatus expected = UploadStatus.NotStarted;
+        Optional<UploadStatus> actual = subject.getPhenotypicStatus(query.getId());
+        Optional<UploadStatus> expected = Optional.of(UploadStatus.NotStarted);
         Assertions.assertEquals(expected, actual);
     }
 }

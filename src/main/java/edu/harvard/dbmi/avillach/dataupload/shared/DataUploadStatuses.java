@@ -1,4 +1,6 @@
 package edu.harvard.dbmi.avillach.dataupload.shared;
 
-public record DataUploadStatuses(UploadStatus genomic, UploadStatus phenotypic) {
+import java.util.UUID;
+
+public record DataUploadStatuses(UploadStatus genomic, UploadStatus phenotypic, String queryId) {
 }

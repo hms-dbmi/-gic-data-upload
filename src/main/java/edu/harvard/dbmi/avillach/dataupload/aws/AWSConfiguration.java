@@ -8,15 +8,15 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.util.StringUtils;
 import software.amazon.awssdk.auth.credentials.*;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.StsClientBuilder;
+import software.amazon.encryption.s3.S3EncryptionClient;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @ConditionalOnProperty(name = "production", havingValue = "true")
@@ -41,11 +41,14 @@ public class AWSConfiguration {
 
     @Bean
     @ConditionalOnProperty(name = "production", havingValue = "true")
-    public Map<String, StsClient> createStsClient(@Autowired Map<String, AwsCredentials> credentials) {
+    public Map<String, StsClient> stsClients(
+        @Autowired Map<String, AwsCredentials> credentials,
+        @Autowired StsClientBuilder stsClientBuilder
+    ) {
         return credentials.entrySet().stream()
             .collect(Collectors.toMap(
                 Map.Entry::getKey,
-                e -> StsClient.builder()
+                e -> stsClientBuilder
                     .region(Region.US_EAST_1)
                     .credentialsProvider(StaticCredentialsProvider.create(e.getValue()))
                     .build())
@@ -62,6 +65,7 @@ public class AWSConfiguration {
         ) {
             LOG.error("Mismatched aws credentials");
             context.close();
+            return Map.of();
         }
 
         HashMap<String, AwsCredentials> creds = new HashMap<>();
@@ -72,5 +76,17 @@ public class AWSConfiguration {
             creds.put(institutions.get(i), cred);
         }
         return creds;
+    }
+
+    @Bean
+    S3EncryptionClient.Builder encryptionClientBuilder() {
+        // This is a bean for mocking purposes
+        return S3EncryptionClient.builder();
+    }
+
+    @Bean
+    StsClientBuilder stsClientBuilder() {
+        // This is a bean for mocking purposes
+        return StsClient.builder();
     }
 }

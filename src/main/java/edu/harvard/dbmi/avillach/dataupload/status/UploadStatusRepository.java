@@ -7,6 +7,8 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public class UploadStatusRepository {
     @Autowired
@@ -15,47 +17,47 @@ public class UploadStatusRepository {
     @Autowired
     private UploadStatusRowMapper mapper;
 
-    public UploadStatus getGenomicStatus(Query query) {
+    public Optional<UploadStatus> getGenomicStatus(String queryId) {
         try {
-            return template.queryForObject(
+            return Optional.ofNullable(template.queryForObject(
                 "SELECT genomic_status AS status FROM query_status WHERE query = unhex(?)",
                 mapper,
-                query.getId().replace("-", "")
-            );
+                queryId.replace("-", "")
+            ));
         } catch (EmptyResultDataAccessException e) {
-            return UploadStatus.Unknown;
+            return Optional.empty();
         }
     }
 
-    public UploadStatus getPhenotypicStatus(Query query) {
+    public Optional<UploadStatus> getPhenotypicStatus(String queryId) {
         try {
-            return template.queryForObject(
+            return Optional.ofNullable(template.queryForObject(
                 "SELECT phenotypic_status AS status FROM query_status WHERE query = unhex(?)",
                 mapper,
-                query.getId().replace("-", "")
-            );
+                queryId.replace("-", "")
+            ));
         } catch (EmptyResultDataAccessException e) {
-            return UploadStatus.Unknown;
+            return Optional.empty();
         }
     }
 
-    public void setGenomicStatus(Query query, UploadStatus status) {
+    public void setGenomicStatus(String queryId, UploadStatus status) {
         String sql = """
             INSERT INTO query_status
                 (query, genomic_status)
                 VALUES (unhex(?), ?)
                 ON DUPLICATE KEY UPDATE genomic_status=?
         """;
-        template.update(sql, query.getId().replace("-", ""), status.toString(), status.toString());
+        template.update(sql, queryId.replace("-", ""), status.toString(), status.toString());
     }
 
-    public void setPhenotypicStatus(Query query, UploadStatus status) {
+    public void setPhenotypicStatus(String queryId, UploadStatus status) {
         String sql = """
             INSERT INTO query_status
                 (query, phenotypic_status)
                 VALUES (unhex(?), ?)
                 ON DUPLICATE KEY UPDATE phenotypic_status=?
         """;
-        template.update(sql, query.getId().replace("-", ""), status.toString(), status.toString());
+        template.update(sql, queryId.replace("-", ""), status.toString(), status.toString());
     }
 }

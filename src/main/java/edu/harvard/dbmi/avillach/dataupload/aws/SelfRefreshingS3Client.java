@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
 public class SelfRefreshingS3Client {
     private static final Logger LOG = LoggerFactory.getLogger(SelfRefreshingS3Client.class);
     private Map<String, ReadWriteLock> locks;
-    private S3Client s3Client;
+    private Map<String, S3Client> clients = new HashMap<>();
 
     @Value("${aws.s3.role_arn}")
     private String roleArn;
@@ -51,6 +51,9 @@ public class SelfRefreshingS3Client {
 
     @Value("${aws.kms.key_id}")
     private String kmsKeyId;
+
+    @Autowired
+    S3EncryptionClient.Builder encryptionClientBuilder;
 
     @Autowired
     private ConfigurableApplicationContext context;
@@ -68,7 +71,8 @@ public class SelfRefreshingS3Client {
         stsClients.keySet().stream().parallel().forEach(this::refreshClient);
     }
 
-    private void refreshClient(String siteName) {
+    // exposed for testing
+    void refreshClient(String siteName) {
         StsClient stsClient = stsClients.get(siteName);
         LOG.info("Starting client refresh for {}", siteName);
 
@@ -109,10 +113,11 @@ public class SelfRefreshingS3Client {
         LOG.info("Created S3 client");
 
         LOG.info("Verifying KMS encryption");
-        s3Client = S3EncryptionClient.builder()
+        S3EncryptionClient clientWithEncryption = encryptionClientBuilder
             .wrappedClient(client)
             .kmsKeyId(kmsKeyId)
             .build();
+        clients.put(siteName, clientWithEncryption);
         LOG.info("Encryption key exists and we can build an encryption client");
 
         // now that client is refreshed, unlock for reading
@@ -138,7 +143,7 @@ public class SelfRefreshingS3Client {
     public S3Client getS3Client(String siteName) {
         S3Client client;
         locks.get(siteName).readLock().lock();
-        client = s3Client;
+        client = clients.get(siteName);
         locks.get(siteName).readLock().unlock();
         return client;
     }
