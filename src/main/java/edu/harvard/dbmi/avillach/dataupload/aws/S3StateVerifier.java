@@ -16,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 
 @ConditionalOnProperty(name = "production", havingValue = "true")
@@ -34,28 +35,32 @@ public class S3StateVerifier {
     @Value("${aws.kms.key_id}")
     private String kmsKeyId;
 
+    @Value("${aws.s3.institution:}")
+    private List<String> institutions;
+
     @Autowired
     private SelfRefreshingS3Client client;
 
     @PostConstruct
     private void verifyS3Status() {
-        Thread.ofVirtual().start(this::asyncVerify);
+        institutions.forEach(inst -> Thread.ofVirtual().start(() -> asyncVerify(inst)));
+
     }
 
-    private void asyncVerify() {
+    private void asyncVerify(String institution) {
         LOG.info("Checking S3 connection...");
         createTempFileWithText()
-            .map(this::uploadFileFromPath)
+            .map(p -> uploadFileFromPath(p, institution))
             .map(this::waitABit)
-            .flatMap(this::deleteFileFromBucket)
+            .flatMap(s1 -> deleteFileFromBucket(s1, institution))
             .orElseThrow();
         LOG.info("S3 connection verified.");
     }
 
-    private Optional<String> deleteFileFromBucket(String s) {
+    private Optional<String> deleteFileFromBucket(String s, String institution) {
         LOG.info("Verifying delete capabilities");
         DeleteObjectRequest request = DeleteObjectRequest.builder().bucket(bucketName).key(s).build();
-        DeleteObjectResponse deleteObjectResponse = client.getS3Client().deleteObject(request);
+        DeleteObjectResponse deleteObjectResponse = client.getS3Client(institution).deleteObject(request);
         return deleteObjectResponse.deleteMarker() ? Optional.of(s) : Optional.empty();
     }
 
@@ -68,7 +73,7 @@ public class S3StateVerifier {
         return s;
     }
 
-    private String uploadFileFromPath(Path p) {
+    private String uploadFileFromPath(Path p, String institution) {
         LOG.info("Verifying upload capabilities");
         RequestBody body = RequestBody.fromFile(p.toFile());
         PutObjectRequest request = PutObjectRequest.builder()
@@ -77,7 +82,7 @@ public class S3StateVerifier {
             .ssekmsKeyId(kmsKeyId)
             .key(p.getFileName().toString())
             .build();
-        client.getS3Client().putObject(request, body);
+        client.getS3Client(institution).putObject(request, body);
         return p.getFileName().toString();
     }
 

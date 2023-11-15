@@ -48,9 +48,9 @@ public class DataUploadService {
     @Autowired
     private Path sharingRoot;
 
-    public void upload(Query query) {
-        Thread.ofVirtual().start(() -> uploadData(query, DataType.Phenotypic));
-        Thread.ofVirtual().start(() -> uploadData(query, DataType.Genomic));
+    public void upload(Query query, String site) {
+        Thread.ofVirtual().start(() -> uploadData(query, DataType.Phenotypic, site));
+        Thread.ofVirtual().start(() -> uploadData(query, DataType.Genomic, site));
     }
     
     private enum DataType {Genomic("genomic_data.tsv"), Phenotypic("phenotypic_data.tsv");
@@ -61,7 +61,7 @@ public class DataUploadService {
         }
     }
 
-    private void uploadData(Query query, DataType dataType) {
+    private void uploadData(Query query, DataType dataType, String site) {
         LOG.info("Starting upload {} process for uuid: {}", dataType, query.getId());
         BiConsumer<Query, UploadStatus> statusSetter = 
             dataType == DataType.Genomic ? statusService::setGenomicStatus : statusService::setPhenotypicStatus;
@@ -82,7 +82,7 @@ public class DataUploadService {
         }
         
         LOG.info("File location verified. Uploading for {} to AWS", query.getId());
-        success = uploadFileFromPath(data);
+        success = uploadFileFromPath(data, site);
         if (success) {
             statusSetter.accept(query, UploadStatus.Complete);
             LOG.info("{} data for {} uploaded!", dataType, query.getId());
@@ -91,7 +91,7 @@ public class DataUploadService {
         }
     }
 
-    private boolean uploadFileFromPath(Path p) {
+    private boolean uploadFileFromPath(Path p, String site) {
         try {
             RequestBody body = RequestBody.fromFile(p.toFile());
             PutObjectRequest request = PutObjectRequest.builder()
@@ -100,7 +100,7 @@ public class DataUploadService {
                 .ssekmsKeyId(kmsKeyId)
                 .key(p.getFileName().toString())
                 .build();
-            s3.getS3Client().putObject(request, body);
+            s3.getS3Client(site).putObject(request, body);
         } catch (AwsServiceException | SdkClientException e) {
             LOG.info("Error uploading file from {} to bucket {}", p, bucketName, e);
             return false;

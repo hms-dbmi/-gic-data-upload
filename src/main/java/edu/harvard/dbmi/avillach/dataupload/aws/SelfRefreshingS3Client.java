@@ -18,15 +18,16 @@ import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
 import software.amazon.awssdk.services.sts.model.AssumeRoleResponse;
 import software.amazon.awssdk.services.sts.model.Credentials;
 import software.amazon.encryption.s3.S3EncryptionClient;
-import software.amazon.encryption.s3.materials.CryptographicMaterialsManager;
-import software.amazon.encryption.s3.materials.DefaultCryptoMaterialsManager;
 
-import java.security.Provider;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * In order to make s3 requests across accounts, we have to assume a role in AWS
@@ -39,7 +40,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 @Service
 public class SelfRefreshingS3Client {
     private static final Logger LOG = LoggerFactory.getLogger(SelfRefreshingS3Client.class);
-    private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    private Map<String, ReadWriteLock> locks;
     private S3Client s3Client;
 
     @Value("${aws.s3.role_arn}")
@@ -55,16 +56,25 @@ public class SelfRefreshingS3Client {
     private ConfigurableApplicationContext context;
 
     @Autowired
-    private StsClient stsClient;
+    private Map<String, StsClient> stsClients;
 
     @Autowired
     ClientStatusService statusService;
 
     @PostConstruct
     private void refreshClient() {
+        locks = stsClients.keySet().stream()
+            .collect(Collectors.toMap(Function.identity(), (s) -> new ReentrantReadWriteLock()));
+        stsClients.keySet().stream().parallel().forEach(this::refreshClient);
+    }
+
+    private void refreshClient(String siteName) {
+        StsClient stsClient = stsClients.get(siteName);
+        LOG.info("Starting client refresh for {}", siteName);
+
         // block further s3 calls while we refresh
         LOG.info("Locking s3 client while refreshing session");
-        lock.writeLock().lock();
+        locks.get(siteName).writeLock().lock();
         statusService.setClientStatus("initializing");
 
         // assume the role
@@ -107,7 +117,7 @@ public class SelfRefreshingS3Client {
 
         // now that client is refreshed, unlock for reading
         LOG.info("Unlocking s3 client. Session refreshed");
-        lock.writeLock().unlock();
+        locks.get(siteName).writeLock().unlock();
         statusService.setClientStatus("ready");
 
         // create virtual thread to handle next refresh, to occur 5 mins before session expires.
@@ -125,11 +135,11 @@ public class SelfRefreshingS3Client {
 
     }
 
-    public S3Client getS3Client() {
+    public S3Client getS3Client(String siteName) {
         S3Client client;
-        lock.readLock().lock();
+        locks.get(siteName).readLock().lock();
         client = s3Client;
-        lock.readLock().unlock();
+        locks.get(siteName).readLock().unlock();
         return client;
     }
 }
