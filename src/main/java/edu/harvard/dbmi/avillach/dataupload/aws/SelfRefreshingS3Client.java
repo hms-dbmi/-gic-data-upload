@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
@@ -16,7 +17,11 @@ import software.amazon.awssdk.services.sts.StsClient;
 import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
 import software.amazon.awssdk.services.sts.model.AssumeRoleResponse;
 import software.amazon.awssdk.services.sts.model.Credentials;
+import software.amazon.encryption.s3.S3EncryptionClient;
+import software.amazon.encryption.s3.materials.CryptographicMaterialsManager;
+import software.amazon.encryption.s3.materials.DefaultCryptoMaterialsManager;
 
+import java.security.Provider;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -30,6 +35,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * the client when the token expires. Requests to the getter will block while this
  * refresh task is running
  */
+@ConditionalOnProperty(name = "production", havingValue = "true")
 @Service
 public class SelfRefreshingS3Client {
     private static final Logger LOG = LoggerFactory.getLogger(SelfRefreshingS3Client.class);
@@ -41,6 +47,9 @@ public class SelfRefreshingS3Client {
 
     @Value("${aws.s3.shared_secret}")
     private String sharedSecret;
+
+    @Value("${aws.kms.key_id}")
+    private String kmsKeyId;
 
     @Autowired
     private ConfigurableApplicationContext context;
@@ -83,10 +92,19 @@ public class SelfRefreshingS3Client {
             .expirationTime(credentials.expiration())
             .build();
         StaticCredentialsProvider provider = StaticCredentialsProvider.create(sessionCredentials);
-        s3Client = S3Client.builder()
+        S3Client client = S3Client.builder()
             .credentialsProvider(provider)
             .region(Region.US_EAST_1)
             .build();
+        LOG.info("Created S3 client");
+
+        LOG.info("Verifying KMS encryption");
+        s3Client = S3EncryptionClient.builder()
+            .wrappedClient(client)
+            .kmsKeyId(kmsKeyId)
+            .build();
+        LOG.info("Encryption key exists and we can build an encryption client");
+
         // now that client is refreshed, unlock for reading
         LOG.info("Unlocking s3 client. Session refreshed");
         lock.writeLock().unlock();

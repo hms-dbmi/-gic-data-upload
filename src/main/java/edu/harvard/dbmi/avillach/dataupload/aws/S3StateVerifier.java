@@ -5,12 +5,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
+import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.encryption.s3.S3EncryptionClient;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -19,6 +18,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
+@ConditionalOnProperty(name = "production", havingValue = "true")
 @Component
 public class S3StateVerifier {
 
@@ -30,6 +30,9 @@ public class S3StateVerifier {
 
     @Value("${aws.s3.access_key_id}")
     private String keyId;
+
+    @Value("${aws.kms.key_id}")
+    private String kmsKeyId;
 
     @Autowired
     private SelfRefreshingS3Client client;
@@ -71,6 +74,7 @@ public class S3StateVerifier {
         PutObjectRequest request = PutObjectRequest.builder()
             .bucket(bucketName)
             .serverSideEncryption(ServerSideEncryption.AWS_KMS)
+            .ssekmsKeyId(kmsKeyId)
             .key(p.getFileName().toString())
             .build();
         client.getS3Client().putObject(request, body);

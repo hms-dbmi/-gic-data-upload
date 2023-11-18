@@ -3,7 +3,7 @@ package edu.harvard.dbmi.avillach.dataupload.shared;
 import java.util.Arrays;
 
 public enum UploadStatus {
-    InProgress, Complete, Error, Unknown;
+    InProgress, Complete, Error, NotStarted, Unknown;
 
     public static UploadStatus fromString(String status) {
         return Arrays.stream(UploadStatus.values())
